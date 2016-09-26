@@ -1,0 +1,147 @@
+		<!DOCTYPE html>
+		<html>
+			<head>
+				<meta charset="utf-8">
+				<meta name="viewport" content="width=device-width,initial-scale=1.0">
+				<title>React Server Page</title>
+				<link rel="stylesheet" href="build/bootstrap.min.css" />
+			</head>
+			<body>				
+				<div id="container" class="container">      
+				  <p>
+				    React Billing List is not working yet!!
+				  </p>
+				</div>
+				<script src="build/react.js"></script>
+				<script src="build/react-dom.js"></script>
+				<script src="build/browser.min.js"></script>
+				<script src="build/jquery.min.js"></script>
+				<script type="text/babel">
+					var Counter = React.createClass({
+						getInitialState: function () {
+							return { count: 0 };
+						},
+						handleClick: function () {
+							var totalcount = this.state.count + 1;
+							this.setState({								
+							  count: totalcount,
+							});
+							this.props.onUpdateCount(totalcount)	//parent component က assign လုပ္လိုက္တဲ့ call back handler fuction ကို this.props ကေန trigger လုပ္ၿပီး totalcount ကို ပို႔ေပးေနတာပါ။
+						},
+						render: function () {
+							return (
+							  <button className="btn btn-warning btn-sm" onClick={this.handleClick} >
+							    Buy: {this.state.count}
+							  </button>
+							);
+						}
+					});
+
+					var ContainerList = React.createClass({
+						getInitialState: function () {
+							return {
+								totalcost: 0,
+								data: [],
+								bills: []
+							};
+						},
+						componentDidMount: function() {
+							$.ajax({
+								url: this.props.url,
+								dataType: 'json',
+								cache: false,
+								success: function(data) {
+									this.setState({data: data});
+								}.bind(this),
+								error: function(xhr, status, err) {
+									console.error(this.props.url, status, err.toString());
+								}.bind(this)
+							});
+						},
+						onUpdateCount: function (count, item) {
+							var sumPriceItem = item.price * count;
+							this.setState({totalcost: this.state.totalcost + sumPriceItem});
+
+							var bills = this.state.bills;
+							var alreadyAddedItems = bills.filter((bill)=>bill.name==item.name);	//ဒီ code line က click ႏွိပ္လိုက္တဲ့ item က bills ထဲမွာ ရွိၿပီးသားလား ဆိုတာကို စစ္ပါတယ္။
+							if(alreadyAddedItems.length){
+
+								//ရွိၿပီးသားဆိုရင္ price နဲ႔ count ကိုပဲ update လုပ္ပါမယ္။
+								alreadyAddedItems[0].price = sumPriceItem;
+								alreadyAddedItems[0].count = count;
+
+							}else{
+
+								bills.push({
+									name: item.name,
+									count: count,
+									price: sumPriceItem
+								});
+
+							}
+
+							this.setState({ bills });
+
+						},
+						renderItem: function(item, index){
+							return (		
+												<li className="row" key={index}>
+													<ul className="col-sm-9 list-inline">
+														<li className="text-primary">{item.name}</li>
+														<li><em>{item.price}</em> <code>Ks</code></li>														
+													</ul>
+													<div className="col-sm-3"><Counter onUpdateCount={(count)=>this.onUpdateCount(count, item)}/></div>
+												</li>										
+											)
+						},
+						renderBill: function(bill, index){
+							return (
+												<tr key={index}>
+													<td>{bill.name}</td>
+													<td>{bill.count}</td>
+													<td>{bill.price} Ks</td>
+												</tr>
+											)
+						},
+						render: function () {
+							return (
+							  <div className="row">
+									<div className="col-sm-4">
+										<h4>Fruit Counter <small>cold store</small></h4>
+										<pre>
+											<ul className="list-unstyled">
+											{this.state.data.map(this.renderItem)}	
+											</ul>	
+										</pre>									
+									</div>
+									<div className="col-sm-4 pull-right">
+										<table className="table">
+											<caption>Make payment at the counter No. 3 <h2>Total cost: <code>{this.state.totalcost}</code> <small>Ks</small></h2></caption>
+											<thead>
+												<tr>
+												<th>Item</th>
+												<th>Amount</th>
+												<th>Price</th>													
+												</tr>
+											</thead>
+										  <tbody>
+												{this.state.bills.map(this.renderBill)}									
+											</tbody>
+										</table>
+									</div>
+								</div>
+							);
+						}
+					});
+
+					ReactDOM.render(
+						<div>
+							<h2>React Billing List</h2>
+							<ContainerList url="/apis/fruits"/>
+						</div>,
+						document.getElementById('container')
+					);
+					
+				</script>
+			</body>
+		</html>
